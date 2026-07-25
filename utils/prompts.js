@@ -23,7 +23,7 @@ const PROMPTS = [
 
 /**
  * Get today's prompt using day-of-year mod prompt count.
- * Everyone sees the same prompt on the same UTC day — simple and deterministic.
+ * Everyone sees the same prompt on the same UTC day - simple and deterministic.
  */
 const getTodayPrompt = () => {
   const now = new Date();

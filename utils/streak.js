@@ -64,7 +64,7 @@ const updateStreak = (user) => {
       // Streak broken
       user.currentStreak = 1;
     }
-    // gap === 0 means same day — no change (duplicate guard)
+    // gap === 0 means same day - no change (duplicate guard)
   }
 
   // Update longest streak

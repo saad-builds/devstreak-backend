@@ -5,11 +5,21 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Access token (short-lived for security)
 const signToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '15m' });
 
+// Refresh token (long-lived)
 const signRefreshToken = (id) =>
   jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' });
+
+// Helper to set HttpOnly cookie options cleanly
+const cookieOptions = {
+  httpOnly: true, // Prevents XSS scripts from reading the cookie
+  secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+  sameSite: 'strict', // Protects against CSRF
+  maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+};
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
@@ -35,7 +45,11 @@ router.post('/signup', async (req, res) => {
     const token = signToken(user._id);
     const refreshToken = signRefreshToken(user._id);
 
-    res.status(201).json({ token, refreshToken, user });
+    // Send refreshToken in an HttpOnly cookie
+    res.cookie('refreshToken', refreshToken, cookieOptions);
+
+    // Send ONLY the access token and user in JSON
+    res.status(201).json({ token, user });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -59,7 +73,11 @@ router.post('/login', async (req, res) => {
     const token = signToken(user._id);
     const refreshToken = signRefreshToken(user._id);
 
-    res.json({ token, refreshToken, user });
+    // Send refreshToken in an HttpOnly cookie
+    res.cookie('refreshToken', refreshToken, cookieOptions);
+
+    // Send ONLY the access token and user in JSON
+    res.json({ token, user });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -69,7 +87,8 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/refresh
 router.post('/refresh', async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    // Read refreshToken from cookies instead of req.body
+    const refreshToken = req.cookies?.refreshToken;
     if (!refreshToken) return res.status(401).json({ message: 'No refresh token' });
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
@@ -79,11 +98,21 @@ router.post('/refresh', async (req, res) => {
     const token = signToken(user._id);
     res.json({ token });
   } catch (err) {
-    res.status(401).json({ message: 'Invalid refresh token' });
+    res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
 });
 
-// GET /api/auth/me — verify token and return user
+// POST /api/auth/logout - Clear the HttpOnly cookie
+router.post('/logout', (req, res) => {
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+  res.json({ message: 'Logged out successfully' });
+});
+
+// GET /api/auth/me - verify token and return user
 router.get('/me', protect, (req, res) => {
   res.json({ user: req.user });
 });
