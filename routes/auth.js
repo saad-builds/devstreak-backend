@@ -73,14 +73,13 @@ router.post('/login', async (req, res) => {
     const token = signToken(user._id);
     const refreshToken = signRefreshToken(user._id);
 
-    // Send refreshToken in an HttpOnly cookie
     res.cookie('refreshToken', refreshToken, cookieOptions);
 
-    // Send ONLY the access token and user in JSON
     res.json({ token, user });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error("LOGIN_ERROR:", err);
+    // Send exact error message back so we can identify it instantly
+    res.status(500).json({ message: 'Server error', error: err.message || String(err) });
   }
 });
 
