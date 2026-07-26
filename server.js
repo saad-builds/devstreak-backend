@@ -10,12 +10,25 @@ const logRoutes = require("./routes/logs");
 
 const app = express();
 
-// 1. CORS Setup (Supports FRONTEND_URL or CLIENT_URL)
-const allowedOrigin = process.env.FRONTEND_URL || process.env.CLIENT_URL || "http://localhost:3000";
+// 1. Dynamic CORS Setup (Supports local + production deployment)
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.CLIENT_URL,
+  "https://devstreak-ui.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
+].filter(Boolean); // Cleans out any undefined values
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -50,7 +63,7 @@ app.use("/api/logs", logRoutes);
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
-// 4. Local Server Fallback (Runs locally; Vercel ignores app.listen)
+// 4. Local Server Fallback
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
