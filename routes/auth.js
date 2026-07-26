@@ -16,8 +16,8 @@ const signRefreshToken = (id) =>
 // Helper to set HttpOnly cookie options cleanly
 const cookieOptions = {
   httpOnly: true, // Prevents XSS scripts from reading the cookie
-  secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-  sameSite: 'strict', // Protects against CSRF
+  secure: process.env.NODE_ENV === 'production', // Must be true when sameSite is 'none'
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allows cross-domain cookies in production
   maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
 };
 
@@ -107,7 +107,7 @@ router.post('/logout', (req, res) => {
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   });
   res.json({ message: 'Logged out successfully' });
 });
