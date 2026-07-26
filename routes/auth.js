@@ -78,8 +78,11 @@ router.post('/login', async (req, res) => {
     res.json({ token, user });
   } catch (err) {
     console.error("LOGIN_ERROR:", err);
-    // Send exact error message back so we can identify it instantly
-    res.status(500).json({ message: 'Server error', error: err.message || String(err) });
+    // Send the error message back to inspect it in DevTools Network Response
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: err.message || String(err) 
+    });
   }
 });
 
