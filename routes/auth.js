@@ -18,6 +18,7 @@ const cookieOptions = {
   httpOnly: true, // Prevents XSS scripts from reading the cookie
   secure: process.env.NODE_ENV === 'production', // Must be true when sameSite is 'none'
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allows cross-domain cookies in production
+  path: '/', // <--- Explicit path matching
   maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
 };
 
@@ -26,7 +27,7 @@ router.post('/signup', async (req, res) => {
   try {
     const { name, email, password, domain } = req.body;
 
-    if (!name || !email || !password)
+    if (!name || !email || !password) 
       return res.status(400).json({ message: 'Name, email and password are required' });
 
     if (password.length < 6)
@@ -106,10 +107,11 @@ router.post('/refresh', async (req, res) => {
 
 // POST /api/auth/logout - Clear the HttpOnly cookie
 router.post('/logout', (req, res) => {
-  res.clearCookie('refreshToken', {
+  res.clearCookie('refreshToken' , {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/', 
   });
   res.json({ message: 'Logged out successfully' });
 });

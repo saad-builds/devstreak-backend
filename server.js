@@ -10,24 +10,27 @@ const logRoutes = require("./routes/logs");
 
 const app = express();
 
-// 1. Dynamic CORS Setup (Supports local + production deployment)
+/* -------------------------------------------------------------------------- */
+/*                                CORS CONFIG                                 */
+/* -------------------------------------------------------------------------- */
+
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   process.env.CLIENT_URL,
   "https://devstreak-ui.vercel.app",
   "http://localhost:3000",
   "http://localhost:5173",
-].filter(Boolean); // Cleans out any undefined values
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or Postman)
+    origin(origin, callback) {
+      // Allow Postman, curl, mobile apps, etc.
       if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+        return callback(null, true);
       }
+
+      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
@@ -36,37 +39,80 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// 2. Serverless MongoDB Connection Cache
-let isConnected = false;
+/* -------------------------------------------------------------------------- */
+/*                           MONGODB CONNECTION                               */
+/* -------------------------------------------------------------------------- */
 
 const connectDB = async () => {
-  if (isConnected) return;
+  // Already connected
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+
   try {
     const db = await mongoose.connect(process.env.MONGO_URI);
-    isConnected = db.connections[0].readyState === 1;
+
+    console.log("Connected to:", db.connection.host);
+    console.log("Database:", db.connection.name);
     console.log("MongoDB connected");
   } catch (err) {
     console.error("MongoDB connection error:", err);
+    throw err;
   }
 };
 
-// Connect to DB before handling any incoming route request
-app.use(async (req, res, next) => {
-  await connectDB();
-  next();
-});
+/* -------------------------------------------------------------------------- */
+/*                          SERVERLESS (VERCEL)                               */
+/* -------------------------------------------------------------------------- */
 
-// 3. API Routes
+if (process.env.NODE_ENV === "production") {
+  app.use(async (req, res, next) => {
+    try {
+      await connectDB();
+      next();
+    } catch (err) {
+      next(err);
+    }
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                 ROUTES                                     */
+/* -------------------------------------------------------------------------- */
+
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/logs", logRoutes);
 
-app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
-// 4. Local Server Fallback
+/* -------------------------------------------------------------------------- */
+/*                          LOCAL DEVELOPMENT                                 */
+/* -------------------------------------------------------------------------- */
+
 if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  const startServer = async () => {
+    try {
+      await connectDB();
+
+      const PORT = process.env.PORT || 5000;
+
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    } catch (err) {
+      console.error("Failed to start server:", err);
+      process.exit(1);
+    }
+  };
+
+  startServer();
 }
+
+/* -------------------------------------------------------------------------- */
+/*                               EXPORT APP                                   */
+/* -------------------------------------------------------------------------- */
 
 module.exports = app;
