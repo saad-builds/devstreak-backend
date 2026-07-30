@@ -9,7 +9,7 @@ const router = express.Router();
 
 // Access token (short-lived for security)
 const signToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "15m" });
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
 // Refresh token (long-lived)
 const signRefreshToken = (id) =>
@@ -176,7 +176,9 @@ router.post("/forgot-password", async (req, res) => {
     });
   } catch (err) {
     console.error("FORGOT_PASSWORD_ERROR:", err);
-    res.status(500).json({ message: "Server error sending email", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Server error sending email", error: err.message });
   }
 });
 

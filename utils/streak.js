@@ -4,7 +4,16 @@
 const getTodayUTC = () => {
   return new Date().toISOString().slice(0, 10);
 };
+console.log("UTC:", new Date().toISOString());
 
+console.log(
+    "PKT:",
+    new Date().toLocaleString("en-US", {
+        timeZone: "Asia/Karachi",
+    })
+);
+
+console.log("Today:", getTodayUTC());
 /**
  * Returns the Monday of the current UTC week: YYYY-MM-DD
  */
